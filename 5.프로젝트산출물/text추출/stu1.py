@@ -1,0 +1,197 @@
+'''
+    version : python 2
+    thema : machine learing
+    decimal base
+'''
+from multiprocessing import Process
+import pefile
+import time
+import threading
+alphabet = 'abcdefghijklmnopqrstuvwxyz'
+
+class _Machine:
+    def __init__(self):
+        self.e_lfanew_string = ""          # type of string
+        self.e_lfanew_int = 0              # type of integer
+        self.sizeOfOptionalHeader = 0      # type of integer
+        self.target = 0                    # type of integer
+        self.binary_value = 0              # type of integer
+        self.hex_value = 0                 # type of integer
+        self.hex_dict = dict()             # type of dictionary
+        self.SectionHeaderTextPosition = 0 # type of integer
+        self.textStart = 0                 # type of integer
+        self.textEnd = 0                   # type of integer
+        self.textSize = 0                  # type of integer
+        self.hex_list = list()             # type of list
+        self.hex_list_result = list()      # type of list
+
+    def step_0_function(self, target):
+        self.target = target
+        self.binary_value = open(self.target, 'rb').read()
+        self.hex_value = self.binary_value.encode('hex')
+    # def bottomLine(self):
+
+    def step_1_function(self):
+        testList = []  # list
+        s = ""  # string
+        num = 0
+        finalDiction = dict()
+        for i in range(0, len(self.hex_value) - 32, 32):
+            for j in range(i, i + 31, 2):
+                s += self.hex_value[j:j + 2]
+                testList.append(s)
+                s = ""
+            self.hex_dict[num] = testList
+            num += 16
+            testList = []
+        self.e_lfanew_string += str(self.hex_dict[48][13])
+        self.e_lfanew_string += str(self.hex_dict[48][12])
+        print self.e_lfanew_string
+    def step_2_function(self):
+        # NT _header first
+        z = 3
+        for index in range(0, len(self.e_lfanew_string)):
+            if self.e_lfanew_string[index].lower() in alphabet:
+                temp = alphabet.find(self.e_lfanew_string[index].lower()) + 10
+                self.e_lfanew_int += temp * (16 ** z)
+                z -= 1
+            else:
+                self.e_lfanew_int += (int(self.e_lfanew_string[index]) * (16 ** z))
+                z -= 1
+
+    def step_3_function(self):
+        pe = pefile.PE('/home/jungil/peframe/peframe/modules/calc.exe')
+        self.sizeOfOptionalHeader = pe.FILE_HEADER.SizeOfOptionalHeader
+        # print stu.sizeOfOptionalHeader
+        temp = 4 + 20 + self.sizeOfOptionalHeader
+        self.SectionHeaderTextPosition = temp + self.e_lfanew_int
+        test = self.SectionHeaderTextPosition + 8 + 12 # position
+        test_1  = self.SectionHeaderTextPosition   + 8 + 8 # size
+
+        '''  <<< start >>> '''
+        index = test % 32
+        temp = ""
+        if index == 0:  # index
+            temp += str(self.hex_dict[test][1])
+            temp += str(self.hex_dict[test][0])
+        else:  #
+            if index + 1 < 16:
+                temp += str(self.hex_dict[test - index][index + 1])
+                temp += str(self.hex_dict[test - index][index])
+            else:
+                temp += str(self.hex_dict[(test - index) + 16][0])
+                temp += str(self.hex_dict[test - index][index])
+
+        temp = ""
+        temp += str(self.hex_dict[test - index][index + 1])
+        temp += str(self.hex_dict[test - index][index])
+        # print temp
+        z = len(temp) - 1
+        for index in range(0, len(temp)):
+            if temp[index].lower() in alphabet:
+                n1 = alphabet.find(temp[index].lower()) + 10
+                self.textStart += n1 * (16 ** z)
+                z -= 1
+            else:
+                self.textStart += (int(temp[index]) * (16 ** z))
+                z -= 1
+        # print "stu.textStart => {}".format(self.textStart)
+
+        temp_textStart_Position_int = self.textStart % 32
+
+        '''  <<< size >>> '''
+        index = test_1 % 32
+        # print index
+        temp = ""
+        if index == 0:  # index
+            temp += str(self.hex_dict[test_1][4])
+            temp += str(self.hex_dict[test_1][3])
+            temp += str(self.hex_dict[test_1][2])
+            temp += str(self.hex_dict[test_1][0])
+        else:  #
+            if index + 1 < 16:
+                temp += str(self.hex_dict[test_1 - index][index + 3])
+                temp += str(self.hex_dict[test_1 - index][index + 2])
+                temp += str(self.hex_dict[test_1 - index][index + 1])
+                temp += str(self.hex_dict[test_1 - index][index + 0])
+            else:
+                temp += str(self.hex_dict[(test_1 - index) + 16][0])
+                temp += str(self.hex_dict[test_1 - index][index])
+        # print temp
+
+        z = len(temp) - 1
+        for index in range(0, len(temp)):
+            if temp[index].lower() in alphabet:
+                n1 = alphabet.find(temp[index].lower()) + 10
+                self.textSize += n1 * (16 ** z)
+                z -= 1
+            else:
+                self.textSize += (int(temp[index]) * (16 ** z))
+                z -= 1
+
+        print "stu.textSize -> {}".format(self.textSize)
+
+    def step_4_function(self):
+        self.textEnd = self.textStart + self.textSize
+
+    def step_5_function(self):
+        u = 0
+        for key in range(self.textStart, self.textEnd + 1, 16):
+            for i in range(0, 13):
+                tempString = ""
+                tempString += self.hex_dict[key][i + 0]
+                tempString += " "
+                tempString += self.hex_dict[key][i + 1]
+                tempString += " "
+                tempString += self.hex_dict[key][i + 2]
+                tempString += " "
+                tempString += self.hex_dict[key][i + 3]
+                self.hex_list.append(tempString)
+
+        #print self.hex_list
+
+    def step_6_function(self, a, b):
+        print a, b
+        for i in range(0, len(self.hex_list)):
+            count = 0
+            s = ""
+            for j in range(a, b):
+                if self.hex_list[i] == self.hex_list[j] :
+                    count += 1
+            s += str(self.hex_list[i])
+            s += " "
+            s += str(count)
+            self.hex_list_result.append(s)
+
+def main():
+    stu = _Machine()
+    t = "calc.exe"
+    stu.step_0_function(t)
+    stu.step_1_function()
+    stu.step_2_function()
+    stu.step_3_function()
+    stu.step_4_function()
+    stu.step_5_function()
+    start_time = time.time()
+    pr1 = Process(target=stu.step_6_function(0, 5000))
+    pr2 = Process(target=stu.step_6_function(5000, 10000))
+    pr3 = Process(target=stu.step_6_function(10000,len(stu.hex_list)-5000))
+    pr4 = Process(target=stu.step_6_function(len(stu.hex_list) - 5000, len(stu.hex_list)))
+
+    pr1.start()
+    pr2.start()
+    pr3.start()
+    pr4.start()
+
+    pr1.join()
+    pr2.join()
+    pr3.join()
+    pr4.join()
+
+    last_time = time.time()
+
+    #print stu.hex_list_result
+    #print last_time - start_time
+    # ------------------------------------------------------- ++++++++++++++++++++
+if __name__ == "__main__":
+    main()

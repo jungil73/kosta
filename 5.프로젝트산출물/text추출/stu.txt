@@ -1,0 +1,210 @@
+'''
+    version : python 2
+    thema : machine learing
+    decimal base
+'''
+import pefile
+import time
+
+alphabet = 'abcdefghijklmnopqrstuvwxyz'
+
+class _Machine:
+    def __init__(self):
+        self.e_lfanew_string = ""          # type of string
+        self.e_lfanew_int = 0              # type of integer
+        self.sizeOfOptionalHeader = 0      # type of integer
+        self.target = 0                    # type of integer
+        self.binary_value = 0              # type of integer
+        self.hex_value = 0                 # type of integer
+        self.hex_dict = dict()             # type of dictionary
+        self.SectionHeaderTextPosition = 0 # type of integer
+        self.textStart = 0                 # type of integer
+        self.textEnd = 0                   # type of integer
+        self.textSize = 0                  # type of integer
+    # def bottomLine(self):
+
+def main():
+    # step 0 -----------------------------------------------------------------------------------
+    # class generate ---------------------------------
+    stu = _Machine()
+
+    # step 1 -----------------------------------------------------------------------------------
+    # DOS _ Header --> e_flanew search !!!
+    stu.target = "test.exe"
+    stu.binary_value = open(stu.target, 'rb').read()
+    ''' rb == read binary'''
+    stu.hex_value = stu.binary_value.encode('hex')
+    '''stu.hex_value : <type 'str'>'''
+
+    '''
+    value = 0
+    for i in range(0, len(stu.hex_value)-32,32):
+        stu.hex_dict[value] = stu.hex_value[i:i+32]
+        value = value + 16
+    '''
+    start_time = time.time()
+    testList = [] # list
+    s = "" # string
+    num = 0
+    finalDiction = dict()
+    for i in range(0, len(stu.hex_value) - 32, 32):
+        for j in range(i, i+31, 2):
+            s += stu.hex_value[j:j+2]
+            testList.append(s)
+            s = ""
+        finalDiction[num] = testList
+        num += 16
+        testList = []
+    #print finalDiction[0]
+    end_time = time.time()
+    #print end_time - start_time
+    '''
+        little endian
+        ab cd -------> cd ab
+    '''
+    stu.e_lfanew_string += str(finalDiction[48][13])
+    stu.e_lfanew_string += str(finalDiction[48][12])
+    '''
+    stu.e_lfanew_string += str(stu.hex_dict[48][26:28])
+    stu.e_lfanew_string += str(stu.hex_dict[48][24:26])
+    '''
+    print "stu.e_lfanew_string => {}".format(stu.e_lfanew_string)
+    #print (len(stu.e_lfanew_string))
+
+
+    # step 2 -----------------------------------------------------------------------------------
+    # NT _header first
+    z = 3
+    for index in range(0, len(stu.e_lfanew_string)):
+        if stu.e_lfanew_string[index].lower() in alphabet:
+            temp = alphabet.find(stu.e_lfanew_string[index].lower()) + 10
+            stu.e_lfanew_int += temp * (16 ** z)
+            z -= 1
+        else:
+            stu.e_lfanew_int += (int(stu.e_lfanew_string[index]) * (16 ** z))
+            z -= 1
+    #print stu.e_lfanew_int
+    #print (stu.hex_dict[stu.e_lfanew_int])
+
+    # step 3 -----------------------------------------------------------------------------------
+    # NT _header last
+    pe = pefile.PE('C:\\Users\\kimjh\\Desktop\\test.exe')
+    stu.sizeOfOptionalHeader = pe.FILE_HEADER.SizeOfOptionalHeader
+    #print stu.sizeOfOptionalHeader
+    temp = 4+20+stu.sizeOfOptionalHeader
+    #print temp
+
+    # step 4 -----------------------------------------------------------------------------------
+    stu.SectionHeaderTextPosition = temp + stu.e_lfanew_int
+    #print "stu.SectionHeaderTextPosition ==> {}".format(stu.SectionHeaderTextPosition)
+
+    test   = stu.SectionHeaderTextPosition + 8 + 12
+    test_1 = stu.SectionHeaderTextPosition + 8 + 8
+
+    #print "test => {}".format(test)
+    index = test%32
+    #print index
+    temp = ""
+    if index == 0: # index
+        temp += str(finalDiction[test][1])
+        temp += str(finalDiction[test][0])
+    else: #
+        if index+1 < 16:
+            temp += str(finalDiction[test - index][index + 1])
+            temp += str(finalDiction[test - index][index])
+        else:
+            temp += str(finalDiction[(test - index) + 16][0])
+            temp += str(finalDiction[test - index][index])
+
+    temp = ""
+    temp += str(finalDiction[test - index][index+1])
+    temp += str(finalDiction[test-index][index])
+    # print temp
+    z = len(temp)-1
+    for index in range(0, len(temp)):
+        if temp[index].lower() in alphabet:
+            n1 = alphabet.find(temp[index].lower()) + 10
+            stu.textStart += n1 * (16 ** z)
+            z -= 1
+        else:
+            stu.textStart += (int(temp[index]) * (16 ** z))
+            z -= 1
+    print "stu.textStart => {}".format(stu.textStart)
+
+
+    temp_textStart_Position_int = stu.textStart % 32
+
+    # < size >
+    index = test_1 % 32
+    # print index
+    temp = ""
+    if index == 0:  # index
+        temp += str(finalDiction[test_1][4])
+        temp += str(finalDiction[test_1][3])
+        temp += str(finalDiction[test_1][2])
+        temp += str(finalDiction[test_1][0])
+    else:  #
+        if index + 1 < 16:
+            temp += str(finalDiction[test_1 - index][index + 3])
+            temp += str(finalDiction[test_1 - index][index + 2])
+            temp += str(finalDiction[test_1 - index][index + 1])
+            temp += str(finalDiction[test_1 - index][index + 0])
+        else:
+            temp += str(finalDiction[(test_1 - index) + 16][0])
+            temp += str(finalDiction[test_1 - index][index])
+    # print temp
+
+    z = len(temp)-1
+    for index in range(0, len(temp)):
+        if temp[index].lower() in alphabet:
+            n1 = alphabet.find(temp[index].lower()) + 10
+            stu.textSize += n1 * (16 ** z)
+            z -= 1
+        else:
+            stu.textSize += (int(temp[index]) * (16 ** z))
+            z -= 1
+
+    print "stu.textSize -> {}".format(stu.textSize)
+
+    # step 5 -----------------------------------------------------------------------------------
+
+    stu.textEnd = stu.textStart + stu.textSize
+    print "stu.textEnd => {}".format(stu.textEnd)
+    '''
+    for value in range(stu.textStart, stu.textEnd, 16):
+        print finalDiction[value]
+    '''
+    testList_2 = list()
+    testList_3 = list()
+    u = 0
+    for key in range(stu.textStart, stu.textEnd+1, 16):
+        for i in range(0, 13):
+            tempString = ""
+            tempString += finalDiction[key][i + 0]
+            tempString += " "
+            tempString += finalDiction[key][i + 1]
+            tempString += " "
+            tempString += finalDiction[key][i + 2]
+            tempString += " "
+            tempString += finalDiction[key][i + 3]
+            testList_2.append(tempString)
+
+    # print testList_2
+    start_time = time.time()
+    for i in range(0, len(testList_2)):
+        hexS = ""
+        s = 0
+        for j in range(0, len(testList_2)):
+            if (testList_2[i] == testList_2[j] and i != j):
+                s += 1
+        hexS += testList_2[i]
+        hexS += " "
+        hexS += str(s)
+        testList_3.append(hexS)
+    testList_3 = list(set(testList_3))
+    end_time = time.time()
+    print end_time - start_time
+    # ------------------------------------------------------- ++++++++++++++++++++
+
+if __name__ == "__main__":
+    main()
